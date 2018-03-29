@@ -1,0 +1,76 @@
+resources:
+- repo: self
+  clean: true
+queue:
+  name: Hosted VS2017
+  demands: 
+  - npm
+  - node.js
+
+variables:
+  Extension.Id: 'git-tag-on-release-task'
+  Extension.Name: 'Tag\Branch Git on Release'
+  Extension.VersionOverride: ''
+  system.debug: 'true'
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: 8.11.0
+
+- task: Npm@1
+  inputs:
+    verbose: false
+
+- task: Gulp@0
+  inputs:
+    targets: build
+    arguments: '--exitOnError=true'
+
+- task: Npm@1
+  inputs:
+    workingDir: 'Tasks/git-branch-on-release-task'
+    verbose: false
+
+- task: Npm@1
+  inputs:
+    workingDir: 'Tasks/git-tag-on-release-task'
+    verbose: false
+
+- task: ms-devlabs.vsts-developer-tools-build-tasks.extension-version-build-task.ExtensionVersion@1
+  inputs:
+    connectedServiceName: 'jabbera vsts marketplace'
+    publisherId: jabbera
+    extensionId: '$(Extension.Id)'
+    extensionTag: '-beta'
+    versionAction: Patch
+
+- task: ms-devlabs.vsts-developer-tools-build-tasks.package-extension-build-task.PackageVSTSExtension@1
+  inputs:
+    outputPath: '$(Build.ArtifactStagingDirectory)\beta-git-tag-on-release-task-$(Extension.Version).vsix'
+    publisherId: jabbera
+    extensionId: '$(Extension.Id)'
+    extensionTag: '-beta'
+    extensionName: '$(Extension.Name) - Beta'
+    extensionVersion: '$(Extension.Version)'
+    updateTasksVersion: true
+    extensionVisibility: private
+    extensionPricing: free
+
+- task: ms-devlabs.vsts-developer-tools-build-tasks.package-extension-build-task.PackageVSTSExtension@1
+  inputs:
+    outputPath: '$(Build.ArtifactStagingDirectory)\release-git-tag-on-release-task-$(Extension.Version).vsix'
+    publisherId: jabbera
+    extensionId: '$(Extension.Id)'
+    extensionName: '$(Extension.Name)'
+    extensionVersion: '$(Extension.Version)'
+    updateTasksVersion: true
+    extensionVisibility: public
+    extensionPricing: free
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: visx
+    publishLocation: Container
+
